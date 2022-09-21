@@ -1,4 +1,5 @@
 import torch.nn as nn
+import torch.nn.functional as F
 from misc import switch_norm1d, get_input_args
 from dilated_layer.dilated_layer import configurable_dilated_layer
 
@@ -15,8 +16,8 @@ class t_conv(nn.Module):
                  ):
         super().__init__()
 
-        if consumption not in [None, 'minimum', 'padded', 'full']:
-            consumption = None
+        if consumption not in ['trim', 'padded', 'full']:
+            consumption = 'full'
         if normalization not in [None, 'batch', 'switch']:
             normalization = 'batch'
         if output not in ['default', 'double', 'top', 'added']:
@@ -32,10 +33,10 @@ class t_conv(nn.Module):
         # if consumption
 
         layers = []
-        for i, dil in enumerate(layer_guide):
-            input_args['dilation'] = dil
-            h = configurable_dilated_layer(**input_args)
-            h.name = f"l{i}k{kernel_size} - Dil: {dil}"
+        for i, lg in enumerate(layer_guide):
+            h = configurable_dilated_layer(
+                **{**input_args, 'kernel_size': lg[0], 'dilation': (lg[0]**lg[1])})
+            h.name = f"l{i}k{kernel_size} - Dil: {lg[0]**lg[1]}"
             if debug:
                 print(h.name)
             layers.append(h)
@@ -43,53 +44,75 @@ class t_conv(nn.Module):
 
         if normalization:
             norms = self._create_norm_array(
-                in_channels, in_size, kernel_size, normalization, layer_guide)
+                in_channels, in_size, normalization, layer_guide)
             self.norms = nn.ModuleList(norms)
 
-        self._calculate_forward(normalization, skip_connections)
+        self._calculate_forward(consumption, normalization, skip_connections)
 
-    def _calculate_forward(self,
+    def _calculate_forward(self, consumption,
                            normalization, skip_connections):
         if normalization:
-            self.f_norm = lambda i, x: self.norms[i](x)
+            self.f_norm = self._norm_pass
         else:
-            self.f_norm = lambda i, x: x
+            self.f_norm = self._passthrough
         if skip_connections:
             self.forward = self._skip_forward
         else:
             self.forward = self._simple_forward
 
-#    def forward(self, x):
-#        x, skips = self.layers[0](x)
-#        x = self.norms[0](x)
-#        for layer, norm in zip(self.hs[1:], self.norms[1:]):
-#            # for layer in self.layers[1:]:
-#            x, skip = layer(x)
-#            x = norm(x)
-#            skips += skip
-#        return skips
+        if consumption == 'trim':
+            self.preproc = self._preproc_trim
+        elif consumption == 'padded':
+            self.preproc = self._preproc_pad
+        elif consumption == 'full':
+            self.preproc = self._passthrough
+
+    def _preproc_trim(self, x):
+        return x.narrow(-1, 0, (x.size()[-1] - self.trim))
+
+    def _preproc_pad(self, x):
+        return F.pad(input=x, pad=(0, self.pad, 0, 0, 0, 0), mode='constant', value=0)
+
+    def _norm_pass(self, x, i):
+        return self.norms[i](x)
+
+    def _passthrough(self, x, *args, **kwargs):
+        return x
 
     def _simple_forward(self, x):
+        x = self.preproc(x)
         for i, layer in enumerate(self.layers):
             x = layer(x)
-            x = self.f_norm(i, x)
-        return
+            x = self.f_norm(x, i)
+        return x
 
     def _skip_forward(self, x):
+        x = self.preproc(x)
         x, skips = self.layers[0](x)
-        x = self.f_norm(0, x)
+        print(x.size())
+        x = self.f_norm(x, 0)
         for i, layer in enumerate(self.layers[1:]):
             x, skip = layer(x)
-            x = self.f_norm(i+1, x)
+            print(x.size())
+            x = self.f_norm(x, i+1)
             skips += skip
         return skips
 
-    @staticmethod
-    def _create_norm_array(in_channels, in_size, kernel_size, normalization, layer_array):
+    def _create_norm_array(self, in_channels, in_size, normalization, layer_array):
         remaining = in_size
+        flag = 0
+        if hasattr(self, 'trim'):
+            remaining -= self.trim
+            flag += 1
+        if hasattr(self, 'pad'):
+            remaining += self.pad
+            flag += 1
+        if flag > 1:
+            raise ValueError(f"Wtf just happened? pad + trim found")
         norm_array = []
-        for dil in layer_array:
-            remaining -= dil * (kernel_size - 1)
+        for lg in layer_array:
+            remaining -= lg[0]**lg[1] * (lg[0] - 1)
+            print(f"Ld: {lg[0]**lg[1]}  -  Remaining: {remaining}")
             if normalization == 'batch':
                 norm_array.append(nn.BatchNorm1d(in_channels))
             elif normalization == 'switch':
@@ -107,14 +130,13 @@ class t_conv(nn.Module):
                 layers_num += 1
 
             for i in range(layers_num):
-                layer_array.append(kernel_size ** i)
+                layer_array.append([kernel_size, i])
 
             if consumption == 'padded':
-                self.pad = self._get_receptive_field(kernel_size, layers_num)\
-                    - (self._get_receptive_field(kernel_size,
-                                                 layers_num - 1) + (output_size - 1))
+                self.pad = self._get_receptive_field(
+                    kernel_size, layers_num) + (output_size - 1) - in_size
                 break
-            elif consumption == 'minimum':
+            elif consumption == 'trim':
                 self.trim = in_size - \
                     (self._get_receptive_field(
                         kernel_size, layers_num) + (output_size - 1))
@@ -124,11 +146,12 @@ class t_conv(nn.Module):
                     k = remaining_input - (output_size - 1)
                     if k == 1:
                         break
-                    layer_array.append(k)
+                    layer_array.append([k, 0])
 
                     break
                 remaining_input = remaining_input\
                     - (self._get_receptive_field(kernel_size, layers_num) - 1)
+                print(f"rem: {remaining_input}")
 
         return layer_array
 
