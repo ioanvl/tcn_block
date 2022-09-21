@@ -1,3 +1,4 @@
+from unittest import skip
 import torch.nn as nn
 import torch.nn.functional as F
 from misc import switch_norm1d, get_input_args
@@ -9,7 +10,7 @@ class t_conv(nn.Module):
     def __init__(self,
                  in_channels, kernel_size,
                  in_size, output_size,
-                 consumption, normalization, output,
+                 consumption, normalization='batch', output="default",
                  residual=False, residual_conv=False,
                  skip_connections=False, skip_conv=False,
                  debug=False
@@ -20,7 +21,7 @@ class t_conv(nn.Module):
             consumption = 'full'
         if normalization not in [None, 'batch', 'switch']:
             normalization = 'batch'
-        if output not in ['default', 'double', 'top', 'added']:
+        if output not in ['default', 'double']:
             output = 'default'
         if (residual_conv):
             residual = True
@@ -47,16 +48,20 @@ class t_conv(nn.Module):
                 in_channels, in_size, normalization, layer_guide)
             self.norms = nn.ModuleList(norms)
 
-        self._calculate_forward(consumption, normalization, skip_connections)
+        self._calculate_forward(
+            consumption, normalization, output, skip_connections)
 
     def _calculate_forward(self, consumption,
-                           normalization, skip_connections):
+                           normalization, output, skip_connections):
         if normalization:
             self.f_norm = self._norm_pass
         else:
             self.f_norm = self._passthrough
         if skip_connections:
-            self.forward = self._skip_forward
+            if output == 'default':
+                self.forward = self._skip_single_out
+            else:
+                self.forward = self._skip_forward
         else:
             self.forward = self._simple_forward
 
@@ -96,6 +101,10 @@ class t_conv(nn.Module):
             print(x.size())
             x = self.f_norm(x, i+1)
             skips += skip
+        return x, skips
+
+    def _skip_single_out(self, x):
+        x, skips = self._skip_forward(x)
         return skips
 
     def _create_norm_array(self, in_channels, in_size, normalization, layer_array):
