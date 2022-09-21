@@ -31,7 +31,6 @@ class t_conv(nn.Module):
 
         layer_guide = self._calculate_layer_array(
             in_size, output_size, kernel_size, consumption)
-        # if consumption
 
         layers = []
         for i, lg in enumerate(layer_guide):
@@ -94,11 +93,9 @@ class t_conv(nn.Module):
     def _skip_forward(self, x):
         x = self.preproc(x)
         x, skips = self.layers[0](x)
-        print(x.size())
         x = self.f_norm(x, 0)
         for i, layer in enumerate(self.layers[1:]):
             x, skip = layer(x)
-            print(x.size())
             x = self.f_norm(x, i+1)
             skips += skip
         return x, skips
@@ -121,7 +118,6 @@ class t_conv(nn.Module):
         norm_array = []
         for lg in layer_array:
             remaining -= lg[0]**lg[1] * (lg[0] - 1)
-            print(f"Ld: {lg[0]**lg[1]}  -  Remaining: {remaining}")
             if normalization == 'batch':
                 norm_array.append(nn.BatchNorm1d(in_channels))
             elif normalization == 'switch':
@@ -160,7 +156,6 @@ class t_conv(nn.Module):
                     break
                 remaining_input = remaining_input\
                     - (self._get_receptive_field(kernel_size, layers_num) - 1)
-                print(f"rem: {remaining_input}")
 
         return layer_array
 
