@@ -10,7 +10,7 @@ class t_conv(nn.Module):
     def __init__(self,
                  in_channels, kernel_size,
                  in_size, output_size,
-                 consumption, normalization='batch', output="default",
+                 consumption='full', normalization='batch', output='default',
                  residual=False, residual_conv=False,
                  skip_connections=False, skip_conv=False,
                  debug=False
