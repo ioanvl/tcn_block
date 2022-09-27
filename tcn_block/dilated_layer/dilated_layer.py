@@ -6,7 +6,7 @@ class configurable_dilated_layer(nn.Module):
     def __init__(self,
                  in_channels, kernel_size, output_size,
                  dilation=1,
-                 stride=1, padding=0, groups=1, bias=True,
+                 padding=0, groups=1, bias=True,
                  residual=False, residual_conv=False,
                  skip_connections=False, skip_conv=False,
                  debug=False, *args, **kwargs):
@@ -17,12 +17,12 @@ class configurable_dilated_layer(nn.Module):
         self.output_size = output_size
 
         self.dilated_conv = nn.Conv1d(in_channels, in_channels, kernel_size,
-                                      stride=stride, padding=padding,
+                                      padding=padding,
                                       dilation=dilation, groups=groups, bias=bias)
 
         if residual_conv:
             self.conv_res = nn.Conv1d(in_channels=in_channels, out_channels=in_channels,
-                                      kernel_size=1, stride=1, padding=0, dilation=1,
+                                      kernel_size=1, padding=0, dilation=1,
                                       groups=1, bias=bias)
 
             self.residual_output = self._residual_conv_out
@@ -31,7 +31,7 @@ class configurable_dilated_layer(nn.Module):
 
         if skip_conv:
             self.conv_skip = nn.Conv1d(in_channels=in_channels, out_channels=in_channels,
-                                       kernel_size=1, stride=1, padding=0, dilation=1,
+                                       kernel_size=1, padding=0, dilation=1,
                                        groups=1, bias=bias)
             self.skip_output = self._skip_conv_forward
         else:
