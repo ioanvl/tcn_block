@@ -1,8 +1,7 @@
-from unittest import skip
 import torch.nn as nn
 import torch.nn.functional as F
-from misc import switch_norm1d, get_input_args
-from dilated_layer.dilated_layer import configurable_dilated_layer
+from .misc import switch_norm1d, get_input_args
+from .dilated_layer.dilated_layer import configurable_dilated_layer
 
 
 class t_conv(nn.Module):

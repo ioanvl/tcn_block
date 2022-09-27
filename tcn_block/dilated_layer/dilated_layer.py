@@ -1,4 +1,4 @@
-from misc import get_input_args
+from tcn_block.misc import get_input_args
 import torch.nn as nn
 
 
