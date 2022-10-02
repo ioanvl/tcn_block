@@ -7,8 +7,8 @@ class configurable_dilated_layer(nn.Module):
                  in_channels, kernel_size, output_size,
                  dilation=1,
                  padding=0, groups=1, bias=True,
-                 residual=False, residual_conv=False,
-                 skip_connections=False, skip_conv=False,
+                 residual=False,
+                 skip_connections=False,
                  debug=False, *args, **kwargs):
         super().__init__()
 
@@ -20,7 +20,7 @@ class configurable_dilated_layer(nn.Module):
                                       padding=padding,
                                       dilation=dilation, groups=groups, bias=bias)
 
-        if residual_conv:
+        if residual == "conv":
             self.conv_res = nn.Conv1d(in_channels=in_channels, out_channels=in_channels,
                                       kernel_size=1, padding=0, dilation=1,
                                       groups=1, bias=bias)
@@ -29,7 +29,7 @@ class configurable_dilated_layer(nn.Module):
         else:
             self.residual_output = lambda out, res: out + res
 
-        if skip_conv:
+        if skip_connections == "conv":
             self.conv_skip = nn.Conv1d(in_channels=in_channels, out_channels=in_channels,
                                        kernel_size=1, padding=0, dilation=1,
                                        groups=1, bias=bias)

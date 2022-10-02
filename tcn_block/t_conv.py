@@ -4,32 +4,42 @@ from .misc import switch_norm1d, get_input_args
 from .dilated_layer.dilated_layer import configurable_dilated_layer
 
 
-class t_conv(nn.Module):
+class tConv1d(nn.Module):
+
+    allowed_input_values = {
+        'consumption': ['trim', 'padded', 'full'],
+        'normalization': [None, 'batch', 'switch'],
+        'output': ['default', 'double'],
+        'residual': [True, False, 'conv'],
+        'skip_connections': [True, False, 'conv']
+    }
 
     def __init__(self,
                  in_channels, kernel_size,
                  in_size, output_size,
                  consumption='full', normalization='batch', output='default',
-                 residual=False, residual_conv=False,
-                 skip_connections=False, skip_conv=False,
+                 residual=False, skip_connections=False,
                  debug=False
                  ):
         super().__init__()
 
-        if consumption not in ['trim', 'padded', 'full']:
-            consumption = 'full'
-        if normalization not in [None, 'batch', 'switch']:
-            normalization = 'batch'
-        if output not in ['default', 'double']:
-            output = 'default'
-        if (residual_conv):
-            residual = True
-        if (skip_conv):
-            skip_connections = True
+        if output_size >= in_size:
+            raise ValueError(
+                F"Output size must be smaller than input: \nin:[{in_size}], out:[{output_size}]")
+        if consumption == 'trim':
+            if (in_size - (kernel_size - 1)) < output_size:
+                raise ValueError(
+                    F"With \"trim\" consumption the input size must be at least equal to [output_size + kernel_size - 1] or larger")
+        for k in tConv1d.allowed_input_values.keys():
+            if locals()[k] not in tConv1d.allowed_input_values[k]:
+                raise ValueError(
+                    F"Invalid argument for [{k}] = {locals()[k]}, alllowed values: {tConv1d.allowed_input_values[k]}")
         input_args = get_input_args(locals())
 
         layer_guide = self._calculate_layer_array(
             in_size, output_size, kernel_size, consumption)
+        if debug:
+            print(layer_guide)
 
         layers = []
         for i, lg in enumerate(layer_guide):
@@ -166,7 +176,7 @@ class t_conv(nn.Module):
     def _get_max_layers(input_size: int, kernel: int) -> int:
         i = 0
         while True:
-            if t_conv._get_receptive_field(kernel, i + 1) > input_size:
+            if tConv1d._get_receptive_field(kernel, i + 1) > input_size:
                 break
             i += 1
         return i
