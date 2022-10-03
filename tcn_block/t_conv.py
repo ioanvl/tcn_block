@@ -4,7 +4,7 @@ from .misc import switch_norm1d, get_input_args
 from .dilated_layer.dilated_layer import configurable_dilated_layer
 
 
-class tConv1d(nn.Module):
+class TConv1d(nn.Module):
 
     allowed_input_values = {
         'consumption': ['trim', 'padded', 'full'],
@@ -29,12 +29,14 @@ class tConv1d(nn.Module):
         if consumption == 'trim':
             if (in_size - (kernel_size - 1)) < output_size:
                 raise ValueError(
-                    F"With \"trim\" consumption the input size must be at least equal to [output_size + kernel_size - 1] or larger \n\
+                    F"With \"trim\" consumption the input size must \
+be at least equal to [output_size + kernel_size - 1] or larger \n\
 [in]:{in_size}, [kernel]:{kernel_size}, [out]:{output_size}")
-        for k in tConv1d.allowed_input_values.keys():
-            if locals()[k] not in tConv1d.allowed_input_values[k]:
+        for k in TConv1d.allowed_input_values:
+            if locals()[k] not in TConv1d.allowed_input_values[k]:
                 raise ValueError(
-                    F"Invalid argument for [{k}] = {locals()[k]}, alllowed values: {tConv1d.allowed_input_values[k]}")
+                    F"Invalid argument for [{k}] = {locals()[k]}, \
+alllowed values: {TConv1d.allowed_input_values[k]}")
         input_args = get_input_args(locals())
 
         layer_guide = self._calculate_layer_array(
@@ -135,6 +137,7 @@ class tConv1d(nn.Module):
         return norm_array
 
     def _calculate_layer_array(self, in_size, output_size, kernel_size, consumption):
+        # todo: break this up into a static to calc layer guide and a a class method to set the self.blahblah
         layer_array = []
         remaining_input = in_size
         while True:
@@ -177,7 +180,7 @@ class tConv1d(nn.Module):
     def _get_max_layers(input_size: int, kernel: int) -> int:
         i = 0
         while True:
-            if tConv1d._get_receptive_field(kernel, i + 1) > input_size:
+            if TConv1d._get_receptive_field(kernel, i + 1) > input_size:
                 break
             i += 1
         return i
