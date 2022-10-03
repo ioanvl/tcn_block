@@ -39,8 +39,18 @@ be at least equal to [output_size + kernel_size - 1] or larger \n\
 alllowed values: {TConv1d.allowed_input_values[k]}")
         input_args = get_input_args(locals())
 
-        layer_guide = self._calculate_layer_array(
+        layer_guide = self._calculate_layers(
             in_size, output_size, kernel_size, consumption)
+
+        if consumption == 'padded':
+            self.pad = self._get_receptive_field(
+                kernel_size, len(layer_guide)) + (output_size - 1) - in_size
+
+        elif consumption == 'trim':
+            self.trim = in_size - \
+                (self._get_receptive_field(
+                    kernel_size, len(layer_guide)) + (output_size - 1))
+
         if debug:
             print(layer_guide)
 
@@ -136,12 +146,12 @@ alllowed values: {TConv1d.allowed_input_values[k]}")
                 norm_array.append(switch_norm1d(in_channels, remaining))
         return norm_array
 
-    def _calculate_layer_array(self, in_size, output_size, kernel_size, consumption):
-        # todo: break this up into a static to calc layer guide and a a class method to set the self.blahblah
+    @staticmethod
+    def _calculate_layers(in_size, output_size, kernel_size, consumption):
         layer_array = []
         remaining_input = in_size
         while True:
-            layers_num = self._get_max_layers(
+            layers_num = TConv1d._get_max_layers(
                 remaining_input - (output_size - 1), kernel_size)
 
             if consumption == 'padded':
@@ -150,16 +160,10 @@ alllowed values: {TConv1d.allowed_input_values[k]}")
             for i in range(layers_num):
                 layer_array.append([kernel_size, i])
 
-            if consumption == 'padded':
-                self.pad = self._get_receptive_field(
-                    kernel_size, layers_num) + (output_size - 1) - in_size
+            if consumption in ['padded', 'trim']:
                 break
-            elif consumption == 'trim':
-                self.trim = in_size - \
-                    (self._get_receptive_field(
-                        kernel_size, layers_num) + (output_size - 1))
-                break
-            elif consumption == 'full':
+
+            if consumption == 'full':
                 if layers_num == 0:
                     k = remaining_input - (output_size - 1)
                     if k == 1:
@@ -168,7 +172,7 @@ alllowed values: {TConv1d.allowed_input_values[k]}")
 
                     break
                 remaining_input = remaining_input\
-                    - (self._get_receptive_field(kernel_size, layers_num) - 1)
+                    - (TConv1d._get_receptive_field(kernel_size, layers_num) - 1)
 
         return layer_array
 
