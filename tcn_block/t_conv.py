@@ -29,7 +29,8 @@ class tConv1d(nn.Module):
         if consumption == 'trim':
             if (in_size - (kernel_size - 1)) < output_size:
                 raise ValueError(
-                    F"With \"trim\" consumption the input size must be at least equal to [output_size + kernel_size - 1] or larger")
+                    F"With \"trim\" consumption the input size must be at least equal to [output_size + kernel_size - 1] or larger \n\
+[in]:{in_size}, [kernel]:{kernel_size}, [out]:{output_size}")
         for k in tConv1d.allowed_input_values.keys():
             if locals()[k] not in tConv1d.allowed_input_values[k]:
                 raise ValueError(
