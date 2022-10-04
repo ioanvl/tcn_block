@@ -29,13 +29,12 @@ class TConv1d(nn.Module):
         if consumption == 'trim':
             if (in_size - (kernel_size - 1)) < output_size:
                 raise ValueError(
-                    F"With \"trim\" consumption the input size must \
-be at least equal to [output_size + kernel_size - 1] or larger \n\
-[in]:{in_size}, [kernel]:{kernel_size}, [out]:{output_size}")
+                    F"With \"trim\" consumption the input size must be at least equal to \
+[output_size + kernel_size - 1] or larger \n[in]:{in_size}, [kernel]:{kernel_size}, [out]:{output_size}")
+
         for k in TConv1d.allowed_input_values:
             if locals()[k] not in TConv1d.allowed_input_values[k]:
-                raise ValueError(
-                    F"Invalid argument for [{k}] = {locals()[k]}, \
+                raise ValueError(F"Invalid argument for [{k}] = {locals()[k]}, \
 alllowed values: {TConv1d.allowed_input_values[k]}")
         input_args = get_input_args(locals())
 
@@ -128,15 +127,11 @@ alllowed values: {TConv1d.allowed_input_values[k]}")
 
     def _create_norm_array(self, in_channels, in_size, normalization, layer_array):
         remaining = in_size
-        flag = 0
         if hasattr(self, 'trim'):
             remaining -= self.trim
-            flag += 1
         if hasattr(self, 'pad'):
             remaining += self.pad
-            flag += 1
-        if flag > 1:
-            raise ValueError(f"Wtf just happened? pad + trim found")
+
         norm_array = []
         for lg in layer_array:
             remaining -= lg[0]**lg[1] * (lg[0] - 1)
