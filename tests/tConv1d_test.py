@@ -11,8 +11,8 @@ class tConvTests(unittest.TestCase):
         **(TConv1d.allowed_input_values),
         'in_channels': [2, 4, 10],
         'kernel_size': [2, 3, 5, 10],
-        'in_size': [35, 100, 300],
-        'output_size': [1, 2, 3, 5],
+        'in_size': [10, 35, 100, 300],
+        'output_size': [1, 2, 3, 5, 10],
     }
 
     def test_module_creation(self):
@@ -31,6 +31,10 @@ class tConvTests(unittest.TestCase):
         _ = TConv1d(in_channels=10, kernel_size=2,
                     in_size=in_size, output_size=in_size-1)
 
+        with self.assertRaises(ValueError):
+            _ = TConv1d(in_channels=10, kernel_size=3,
+                        in_size=in_size, output_size=in_size-1, consumption='trim')
+
         for outp in [in_size, in_size+1]:
             with self.assertRaises(ValueError):
                 _ = TConv1d(in_channels=10, kernel_size=2,
@@ -44,6 +48,11 @@ class tConvTests(unittest.TestCase):
                                                     'consumption', 'normalization',
                                                     'residual', 'residual_conv',
                                                     'skip_connections', 'skip_conv', ])):
+            if ((output_size >= vals['in_size']) or
+                    (vals['consumption'] == 'trim') and
+                    ((vals['in_size'] - (vals['kernel_size'] - 1)) < output_size)):
+                continue
+
             conv = TConv1d(**{**vals, 'in_channels': channels,
                               'output_size': output_size})
 

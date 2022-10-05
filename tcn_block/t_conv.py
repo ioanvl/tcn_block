@@ -26,10 +26,9 @@ class TConv1d(nn.Module):
         if output_size >= in_size:
             raise ValueError(
                 F"Output size must be smaller than input: \nin:[{in_size}], out:[{output_size}]")
-        if consumption == 'trim':
-            if (in_size - (kernel_size - 1)) < output_size:
-                raise ValueError(
-                    F"With \"trim\" consumption the input size must be at least equal to \
+        if (consumption == 'trim') and ((in_size - (kernel_size - 1)) < output_size):
+            raise ValueError(
+                F"With \"trim\" consumption the input size must be at least equal to \
 [output_size + kernel_size - 1] or larger \n[in]:{in_size}, [kernel]:{kernel_size}, [out]:{output_size}")
 
         for k in TConv1d.allowed_input_values:
