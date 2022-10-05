@@ -18,4 +18,4 @@ def gridGenerator(input_dict):
 
 
 def pick_dict_values(input_dict, vals):
-    return {x: input_dict[x] for x in input_dict.keys() if x in vals}
+    return {x: input_dict[x] for x in vals if x in input_dict.keys()}
